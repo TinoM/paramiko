@@ -40,6 +40,7 @@ from tests import requireNonAsciiLocale
 
 from ._util import needs_builtin
 from ._util import slow
+from unittest import TestCase
 
 
 ARTICLE = """

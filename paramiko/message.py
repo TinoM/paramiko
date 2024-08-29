@@ -174,14 +174,11 @@ class Message:
 
     # TODO 4.0: also consider having this take over the get_string name, and
     # remove this name instead.
-    def get_text(self):
+    def get_text(self, encoding="utf8", errors="strict"):
         """
         Fetch a Unicode string from the stream.
-
-        This currently operates by attempting to encode the next "string" as
-        ``utf-8``.
         """
-        return u(self.get_string())
+        return u(self.get_string(), encoding, errors)
 
     def get_binary(self):
         """

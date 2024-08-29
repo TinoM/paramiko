@@ -34,8 +34,8 @@ class LoopbackFile(BufferedFile):
     BufferedFile object that you can write data into, and then read it back.
     """
 
-    def __init__(self, mode="r", bufsize=-1):
-        BufferedFile.__init__(self)
+    def __init__(self, mode="r", bufsize=-1, encoding="utf8", errors="strict"):
+        BufferedFile.__init__(self, encoding, errors)
         self._set_mode(mode, bufsize)
         self.buffer = BytesIO()
         self.offset = 0
@@ -52,7 +52,7 @@ class LoopbackFile(BufferedFile):
 
 class BufferedFileTest(unittest.TestCase):
     def test_simple(self):
-        f = LoopbackFile("r")
+        f = LoopbackFile("r", encoding="utf8", errors="strict")
         try:
             f.write(b"hi")
             self.assertTrue(False, "no exception on write to read-only file")
@@ -60,7 +60,7 @@ class BufferedFileTest(unittest.TestCase):
             pass
         f.close()
 
-        f = LoopbackFile("w")
+        f = LoopbackFile("w", encoding="utf8", errors="strict")
         try:
             f.read(1)
             self.assertTrue(False, "no exception to read from write-only file")
@@ -69,7 +69,7 @@ class BufferedFileTest(unittest.TestCase):
         f.close()
 
     def test_readline(self):
-        f = LoopbackFile("r+U")
+        f = LoopbackFile("r+U", encoding="utf8", errors="strict")
         f.write(
             b"First line.\nSecond line.\r\nThird line.\n"
             + b"Fourth line.\nFinal line non-terminated."
@@ -99,7 +99,7 @@ class BufferedFileTest(unittest.TestCase):
         """
         try to trick the linefeed detector.
         """
-        f = LoopbackFile("r+U")
+        f = LoopbackFile("r+U", encoding="utf8", errors="strict")
         f.write(b"First line.\r")
         self.assertEqual(f.readline(), "First line.\n")
         f.write(b"\nSecond.\r\n")
@@ -111,7 +111,7 @@ class BufferedFileTest(unittest.TestCase):
         """
         verify that write buffering is on.
         """
-        f = LoopbackFile("r+", 1)
+        f = LoopbackFile("r+", 1, encoding="utf8", errors="strict")
         f.write(b"Complete line.\nIncomplete line.")
         self.assertEqual(f.readline(), "Complete line.\n")
         self.assertEqual(f.readline(), "")
@@ -123,7 +123,7 @@ class BufferedFileTest(unittest.TestCase):
         """
         verify that flush will force a write.
         """
-        f = LoopbackFile("r+", 512)
+        f = LoopbackFile("r+", 512, encoding="utf8", errors="strict")
         f.write("Not\nquite\n512 bytes.\n")
         self.assertEqual(f.read(1), b"")
         f.flush()
@@ -138,7 +138,7 @@ class BufferedFileTest(unittest.TestCase):
         """
         verify that flushing happens automatically on buffer crossing.
         """
-        f = LoopbackFile("r+", 16)
+        f = LoopbackFile("r+", 16, encoding="utf8", errors="strict")
         f.write(b"Too small.")
         self.assertEqual(f.read(4), b"")
         f.write(b"  ")
@@ -151,7 +151,7 @@ class BufferedFileTest(unittest.TestCase):
         """
         verify that read(-1) returns everything left in the file.
         """
-        f = LoopbackFile("r+", 16)
+        f = LoopbackFile("r+", 16, encoding="utf8", errors="strict")
         f.write(b"The first thing you need to do is open your eyes. ")
         f.write(b"Then, you need to close them again.\n")
         s = f.read(-1)
@@ -163,14 +163,14 @@ class BufferedFileTest(unittest.TestCase):
         f.close()
 
     def test_readable(self):
-        f = LoopbackFile("r")
+        f = LoopbackFile("r", encoding="utf8", errors="strict")
         self.assertTrue(f.readable())
         self.assertFalse(f.writable())
         self.assertFalse(f.seekable())
         f.close()
 
     def test_writable(self):
-        f = LoopbackFile("w")
+        f = LoopbackFile("w", encoding="utf8", errors="strict")
         self.assertTrue(f.writable())
         self.assertFalse(f.readable())
         self.assertFalse(f.seekable())
@@ -178,25 +178,25 @@ class BufferedFileTest(unittest.TestCase):
 
     def test_readinto(self):
         data = bytearray(5)
-        f = LoopbackFile("r+")
+        f = LoopbackFile("r+", encoding="utf8", errors="strict")
         f._write(b"hello")
         f.readinto(data)
         self.assertEqual(data, b"hello")
         f.close()
 
     def test_write_bad_type(self):
-        with LoopbackFile("wb") as f:
+        with LoopbackFile("wb", encoding="utf8", errors="strict") as f:
             self.assertRaises(TypeError, f.write, object())
 
     def test_write_unicode_as_binary(self):
-        text = "\xa7 why is writing text to a binary file allowed?\n"
-        with LoopbackFile("rb+") as f:
+        text = u"\xa7 why is writing text to a binary file allowed?\n"
+        with LoopbackFile("rb+", encoding="utf8", errors="strict") as f:
             f.write(text)
             self.assertEqual(f.read(), text.encode("utf-8"))
 
     @needs_builtin("memoryview")
     def test_write_bytearray(self):
-        with LoopbackFile("rb+") as f:
+        with LoopbackFile("rb+", encoding="utf8", errors="strict") as f:
             f.write(bytearray(12))
             self.assertEqual(f.read(), 12 * b"\0")
 
@@ -204,7 +204,7 @@ class BufferedFileTest(unittest.TestCase):
     def test_write_buffer(self):
         data = 3 * b"pretend giant block of data\n"
         offsets = range(0, len(data), 8)
-        with LoopbackFile("rb+") as f:
+        with LoopbackFile("rb+", encoding="utf8", errors="strict") as f:
             for offset in offsets:
                 f.write(buffer(data, offset, 8))  # noqa
             self.assertEqual(f.read(), data)
@@ -213,7 +213,7 @@ class BufferedFileTest(unittest.TestCase):
     def test_write_memoryview(self):
         data = 3 * b"pretend giant block of data\n"
         offsets = range(0, len(data), 8)
-        with LoopbackFile("rb+") as f:
+        with LoopbackFile("rb+", encoding="utf8", errors="strict") as f:
             view = memoryview(data)
             for offset in offsets:
                 f.write(view[offset : offset + 8])

@@ -48,7 +48,7 @@ class BufferedFile(ClosingContextManager):
     FLAG_LINE_BUFFERED = 0x40
     FLAG_UNIVERSAL_NEWLINE = 0x80
 
-    def __init__(self):
+    def __init__(self, encoding="utf8", errors="strict"):
         self.newlines = None
         self._flags = 0
         self._bufsize = self._DEFAULT_BUFSIZE
@@ -62,6 +62,8 @@ class BufferedFile(ClosingContextManager):
         self._pos = self._realpos = 0
         # size only matters for seekable files
         self._size = 0
+        self.encoding = encoding
+        self.errors = errors
 
     def __del__(self):
         self.close()
@@ -278,7 +280,11 @@ class BufferedFile(ClosingContextManager):
             if (new_data is None) or (len(new_data) == 0):
                 self._rbuffer = bytes()
                 self._pos += len(line)
-                return line if self._flags & self.FLAG_BINARY else u(line)
+                return (
+                    line
+                    if self._flags & self.FLAG_BINARY
+                    else u(line, self.encoding, self.errors)
+                )
             line += new_data
             self._realpos += len(new_data)
         # find the newline
@@ -290,7 +296,11 @@ class BufferedFile(ClosingContextManager):
         if pos == -1:
             # we couldn't find a newline in the truncated string, return it
             self._pos += len(line)
-            return line if self._flags & self.FLAG_BINARY else u(line)
+            return (
+                line
+                if self._flags & self.FLAG_BINARY
+                else u(line, self.encoding, self.errors)
+            )
         xpos = pos + 1
         if (
             line[pos] == cr_byte_value
@@ -315,7 +325,11 @@ class BufferedFile(ClosingContextManager):
         else:
             self._record_newline(lf)
         self._pos += len(line)
-        return line if self._flags & self.FLAG_BINARY else u(line)
+        return (
+            line
+            if self._flags & self.FLAG_BINARY
+            else u(line, self.encoding, self.errors)
+        )
 
     def readlines(self, sizehint=None):
         """
@@ -330,7 +344,7 @@ class BufferedFile(ClosingContextManager):
         lines = []
         byte_count = 0
         while True:
-            line = self.readline()
+            line = self.readline(sizehint)
             if len(line) == 0:
                 break
             lines.append(line)
